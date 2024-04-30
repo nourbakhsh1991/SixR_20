@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AA0010001" xml:space="preserve">
+    <value>Invalid literal type.</value>
+  </data>
+  <data name="AA0010002" xml:space="preserve">
+    <value>Undefied variable name.</value>
+  </data>
+  <data name="AA0010003" xml:space="preserve">
+    <value>Index out of range.</value>
+  </data>
+  <data name="AA0010004" xml:space="preserve">
+    <value>Sign Operator can only be applied on numerics.</value>
+  </data>
+  <data name="AA0010005" xml:space="preserve">
+    <value>Not Operator can only be applied on boolean.</value>
+  </data>
+  <data name="AA0010006" xml:space="preserve">
+    <value>Multiplicative Operators can only be applied on numerics.</value>
+  </data>
+  <data name="AA0010007" xml:space="preserve">
+    <value>Additive Operators can only be applied on numerics.</value>
+  </data>
+  <data name="AA0010008" xml:space="preserve">
+    <value>AND Operator can only be applied on boolean.</value>
+  </data>
+  <data name="AA0010009" xml:space="preserve">
+    <value>XOR Operator can only be applied on boolean.</value>
+  </data>
+  <data name="AA0010010" xml:space="preserve">
+    <value>OR Operator can only be applied on boolean.</value>
+  </data>
+  <data name="AA0010011" xml:space="preserve">
+    <value>Relational and Equality Operators must be applied to objects with same types.</value>
+  </data>
+  <data name="AA0010012" xml:space="preserve">
+    <value>Undefiend Operator.</value>
+  </data>
+  <data name="AA0010013" xml:space="preserve">
+    <value>Invalid Array Difinition.</value>
+  </data>
+  <data name="AA0010014" xml:space="preserve">
+    <value>Invalid Position Vector Definition.</value>
+  </data>
+  <data name="AA0010015" xml:space="preserve">
+    <value>Posiotion Vector Parameters Must be of type flaot.</value>
+  </data>
+  <data name="AA0010016" xml:space="preserve">
+    <value>Invalid Point Definition.</value>
+  </data>
+  <data name="AA0010017" xml:space="preserve">
+    <value>For loop only accepts integers.</value>
+  </data>
+  <data name="AA0010018" xml:space="preserve">
+    <value>Wrong Speed Value.</value>
+  </data>
+  <data name="AA0010019" xml:space="preserve">
+    <value>Wrong Continuity Value.</value>
+  </data>
+  <data name="AA0010020" xml:space="preserve">
+    <value>LIN command only accepts Eular points.</value>
+  </data>
+  <data name="AA0010021" xml:space="preserve">
+    <value>Unreachable Point detected.</value>
+  </data>
+  <data name="AA0010022" xml:space="preserve">
+    <value>Conditions must be  boolean.</value>
+  </data>
+  <data name="AA0010023" xml:space="preserve">
+    <value>Break must be used inside a loop Operatror.</value>
+  </data>
+  <data name="AA0010024" xml:space="preserve">
+    <value>Continue must be used inside a loop Operatror.</value>
+  </data>
+  <data name="AA0110001" xml:space="preserve">
+    <value>Starting SelfTest Pruceduer ...</value>
+  </data>
+  <data name="AA0110002" xml:space="preserve">
+    <value>SelfTest started.</value>
+  </data>
+  <data name="AA0110003" xml:space="preserve">
+    <value>Waiting for other operation to be completed.</value>
+  </data>
+  <data name="AA0110004" xml:space="preserve">
+    <value>Starting Beckhoff Controller ...</value>
+  </data>
+  <data name="AA0110005" xml:space="preserve">
+    <value>The controller has been Started.</value>
+  </data>
+  <data name="AA0110006" xml:space="preserve">
+    <value>Start testing Drive(s) ...</value>
+  </data>
+  <data name="AA0110007" xml:space="preserve">
+    <value>Drive(s) is responding.</value>
+  </data>
+  <data name="AA0110008" xml:space="preserve">
+    <value>All Drive(s) are ready to SwitchOn.</value>
+  </data>
+  <data name="AA0110009" xml:space="preserve">
+    <value>Drive(s) have Errors.</value>
+  </data>
+  <data name="AA0110010" xml:space="preserve">
+    <value>trying to clear erros.</value>
+  </data>
+  <data name="AA0110011" xml:space="preserve">
+    <value>Checking Drive(s) Errors.</value>
+  </data>
+  <data name="AA0110012" xml:space="preserve">
+    <value>All Drive(s) are ready to Move.</value>
+  </data>
+  <data name="AA0110013" xml:space="preserve">
+    <value>Drive(s) are Moving ...</value>
+  </data>
+  <data name="AA0110014" xml:space="preserve">
+    <value>Drive(s) are Safe.</value>
+  </data>
+  <data name="AA1110001" xml:space="preserve">
+    <value>Multiple parameter registeration.</value>
+  </data>
+</root>

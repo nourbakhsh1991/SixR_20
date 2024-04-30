@@ -1,0 +1,1696 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using Antlr4.Runtime.Tree;
+using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra.Double;
+using SixR_20.Models;
+using SixR_20.ViewModels;
+using TwinCAT.Ads.TypeSystem;
+
+namespace SixR_20.Interpreter
+{
+    class SixRGrammerVisitor : SixRGrammerBaseVisitor<object>
+    {
+        public List<Variable> _variables = new List<Variable>();
+        private List<Operation> _operations = new List<Operation>();
+        private bool shallIBreak = false;
+        private IParseTree howToBreak = null;
+        private bool shallIContinue = false;
+        private IParseTree howToContinue = null;
+        public bool RunCode = false;
+        public bool isPuased = false;
+        public bool isStoped = false;
+        public SixRGrammerVisitor(MyController ctr, Traj7Seg trj)
+        {
+            RunCode = false;
+            //_ctrlr = ctr;
+            //_trj7 = trj;
+           // AddDigitalInputs();
+           // AddDigitalOutputs();
+            //AddSixRVariables();
+        }
+/*
+        private void AddDigitalInputs()
+        {
+            List<object> objs = new List<object>();
+            for (int i = 0; i < SixRConstants.NumberOfInputs; i++)
+                objs.Add(_ctrlr.DigitalInputs[i]);
+            _variables.Add(new Variable()
+            {
+                Type = PrimitiveType.BOOL,
+                IsArray = true,
+                ArrayDim = new List<int>() { SixRConstants.NumberOfInputs },
+                ArrayLength = SixRConstants.NumberOfInputs,
+                Name = "_sixR_DI",
+                Value = objs,
+                IsReadOnly = true
+            });
+        }
+        private void AddDigitalOutputs()
+        {
+            List<object> objs = new List<object>();
+            for (int i = 0; i < SixRConstants.NumberOfOutputs; i++)
+                objs.Add(_ctrlr.DigitalOutputs[i]);
+            _variables.Add(new Variable()
+            {
+                Type = PrimitiveType.BOOL,
+                IsArray = true,
+                ArrayDim = new List<int>() { SixRConstants.NumberOfOutputs },
+                ArrayLength = SixRConstants.NumberOfOutputs,
+                Name = "_sixR_DO",
+                Value = objs
+            });
+        }
+        private void AddSixRVariables()
+        {
+            _variables.Add(new Variable()
+            {
+                Type = PrimitiveType.POINTJ,
+                IsArray = false,
+                ArrayLength = 0,
+                Name = "_sixR_Home",
+                IsReadOnly = true,
+                Value = new Point6R(new double[] { 0, 0, 0, 0, 0, 0 }, new bool[] { true, true, true, true, true, true }, false, 100)
+            });
+        }
+        private void WriteText(double[] inp)
+        {
+            StreamWriter log;
+            FileStream fileStream = null;
+            DirectoryInfo logDirInfo = null;
+            FileInfo logFileInfo;
+            string whatIsToBeLoged = "";
+
+            string logFilePath = "C:\\Logs\\";
+            logFilePath = logFilePath + "Log-Actual.txt";
+            logFileInfo = new FileInfo(logFilePath);
+            logDirInfo = new DirectoryInfo(logFileInfo.DirectoryName);
+            if (!logDirInfo.Exists) logDirInfo.Create();
+            if (!logFileInfo.Exists)
+            {
+                fileStream = logFileInfo.Create();
+            }
+            else
+            {
+                fileStream = new FileStream(logFilePath, FileMode.Append);
+            }
+            log = new StreamWriter(fileStream);
+            for (int i = 0; i < 6; i++)
+                whatIsToBeLoged += "M" + i + ": " + inp[i] + "\t";
+            whatIsToBeLoged += "\r\n";
+            log.WriteLine(whatIsToBeLoged);
+            log.Close();
+        }
+
+        private bool isLoopOperator(IParseTree node)
+        {
+            return (node is SixRGrammerParser.STATFORContext || node is SixRGrammerParser.STATWHILEContext);
+        }
+
+        public override object VisitRoutineBody(SixRGrammerParser.RoutineBodyContext context)
+        {
+            GcodeStart();
+            return base.VisitRoutineBody(context);
+        }
+
+        public override object VisitSTATWAITFOR(SixRGrammerParser.STATWAITFORContext context)
+        {
+            var sec = VisitExpression(context.expression());
+            var op = new Operation
+            {
+                Data = sec,
+                Act = Action.WAIT_SEC,
+                Child = null
+            };
+            _operations.Add(op);
+            return null;
+        }
+
+        public override object VisitSTATWAITSEC(SixRGrammerParser.STATWAITSECContext context)
+        {
+
+            var sec = VisitExpression(context.expression());
+            if (!(sec is int))
+                throw new Exception("Expertion must have a Int Result.");
+            var op = new Operation
+            {
+                Data = sec,
+                Act = Action.WAIT_SEC,
+                Child = null
+            };
+            _operations.Add(op);
+            Thread.Sleep((int)sec);
+            return null;
+        }
+
+        public override object VisitSTATCIR(SixRGrammerParser.STATCIRContext context)
+        {
+            var op = new Operation();
+            Variable pnt1 = null, pnt2 = null, scal = null;
+            var experssionCounter = 0;
+            float F = -1;
+            int Con = 1;
+            var walker = context.GetChild(1);
+            //IParseTree tree = cp.module();
+            if (walker is SixRGrammerParser.VariableNameContext)
+            {
+                var point = _variables.FirstOrDefault(a => (a.Type == PrimitiveType.POINTJ || a.Type == PrimitiveType.POINTX) && a.Name == walker.GetText());
+                if (point == null)
+                    throw new Exception("Undefined variable name \"" + walker.GetText() + "\"");
+                if (point.Type == PrimitiveType.POINTJ)
+                    throw new Exception("Line command only accepts Elur Points. \"" + walker.GetText() + "\"");
+                op.Act = Action.CIR;
+                pnt1 = point;
+                op.Child = null;
+
+            }
+            else if (walker is SixRGrammerParser.SixRJXPointContext)
+            {
+                var point = new Variable
+                {
+                    Name = null,
+                    IsArray = false,
+                    Type = PrimitiveType.POINTX
+                };
+                if (context.children.Any(a => a.GetText().ToLower() == "j"))
+                {
+                    throw new Exception("Undefined variable name \"" + walker.GetText() + "\"");
+                }
+                var output = new List<object>();
+                output.AddRange(VisitSixRTreePoint(walker.GetChild(1) as SixRGrammerParser.SixRTreePointContext) as List<object>);
+                if (walker is SixRGrammerParser.SixRJXPointContext)
+                {
+                    output.AddRange(VisitSixRTreePoint(walker.GetChild(3) as SixRGrammerParser.SixRTreePointContext) as List<object>);
+                }
+                point.Value = output;
+                op.Act = Action.PTP;
+                pnt1 = point;
+                op.Child = null;
+            }
+            walker = context.GetChild(2);
+            if (walker is SixRGrammerParser.VariableNameContext)
+            {
+                var point = _variables.FirstOrDefault(a => (a.Type == PrimitiveType.POINTJ || a.Type == PrimitiveType.POINTX) && a.Name == walker.GetText());
+                if (point == null)
+                    throw new Exception("Undefined variable name \"" + walker.GetText() + "\"");
+                if (point.Type == PrimitiveType.POINTJ)
+                    throw new Exception("Line command only accepts Elur Points. \"" + walker.GetText() + "\"");
+                op.Act = Action.LIN;
+                pnt2 = point;
+                op.Child = null;
+
+            }
+            else if (walker is SixRGrammerParser.SixRJXPointContext)
+            {
+                var point = new Variable
+                {
+                    Name = null,
+                    IsArray = false,
+                    Type = PrimitiveType.POINTX
+                };
+                if (context.children.Any(a => a.GetText().ToLower() == "j"))
+                {
+                    throw new Exception("Undefined variable name \"" + walker.GetText() + "\"");
+                }
+                var output = new List<object>();
+                output.AddRange(VisitSixRTreePoint(walker.GetChild(1) as SixRGrammerParser.SixRTreePointContext) as List<object>);
+                if (walker is SixRGrammerParser.SixRJXPointContext)
+                {
+                    output.AddRange(VisitSixRTreePoint(walker.GetChild(3) as SixRGrammerParser.SixRTreePointContext) as List<object>);
+                }
+                point.Value = output;
+                op.Act = Action.PTP;
+                pnt2 = point;
+                op.Child = null;
+            }
+
+            if (context.ChildCount > 3 && context.GetChild(3) is SixRGrammerParser.ExpressionContext)
+            {
+                var sc = VisitExpression(context.expression(experssionCounter++));
+                if (sc is float)
+                    scal = new Variable() { Type = PrimitiveType.FLOAT, Value = sc, Name = null, IsArray = false, ArrayLength = -1 };
+                else if (sc is int)
+                    scal = new Variable() { Type = PrimitiveType.INT, Value = sc, Name = null, IsArray = false, ArrayLength = -1 };
+                else
+                    throw new Exception("Wrong Scalr Value.");
+            }
+
+            if (context.children.Any(a => a.GetText().ToLower() == "f"))
+            {
+                var f = VisitExpression(context.expression(experssionCounter++));
+                if (f is float)
+                    F = (float)f;
+                else if (f is int)
+                    F = (int)f;
+                else
+                    throw new Exception("Wrong f value.");
+            }
+            if (context.children.Any(a => a.GetText().ToLower() == "con"))
+            {
+                var con = VisitExpression(context.expression(experssionCounter));
+                if (con is int)
+                {
+                    switch ((int)con)
+                    {
+                        case 1:
+                            con = 1;
+                            break;
+                        case 0:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception("Wrog Con value.");
+                    }
+
+                }
+                else if (con is bool)
+                {
+                    switch ((bool)con)
+                    {
+                        case true:
+                            con = 1;
+                            break;
+                        case false:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception("Wrog Con value.");
+                    }
+                }
+                else
+                {
+                    throw new Exception("Wrog Con value.");
+                }
+            }
+            op.Data = new { point1 = pnt1, point2 = pnt2, scalar = scal, F, Con };
+            _operations.Add(op);
+            return null;
+        }
+
+        // DONE
+        public override object VisitSTATLIN(SixRGrammerParser.STATLINContext context)
+        {
+            var op = new Operation();
+            var experssionCounter = 0;
+            Variable pnt = null;
+            float F = -1;
+            int Con = 1;
+            var walker = context.GetChild(1);
+            if (walker is SixRGrammerParser.VariableNameContext)
+            {
+                var point = _variables.FirstOrDefault(a => (a.Type == PrimitiveType.POINTJ || a.Type == PrimitiveType.POINTX) && a.Name == walker.GetText());
+                if (point == null)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " + context.Start.Line);
+                if (point.Type == PrimitiveType.POINTJ)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010020") + "\r\n in Line: " + context.Start.Line);
+                op.Act = Action.LIN;
+                pnt = point;
+                op.Child = null;
+
+            }
+            else if (walker is SixRGrammerParser.SixRJXPointContext)
+            {
+                var point = new Variable
+                {
+                    Name = null,
+                    IsArray = false,
+                    Type = PrimitiveType.POINTX
+                };
+                if ((walker as SixRGrammerParser.SixRJXPointContext).GetChild(0) is SixRGrammerParser.SixRJPointContext)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010020") + "\r\n in Line: " + context.Start.Line);
+                point.Value = VisitSixRJXPoint(walker as SixRGrammerParser.SixRJXPointContext);
+                op.Act = Action.LIN;
+                pnt = point;
+                op.Child = null;
+            }
+            if (context.children.Any(a => a.GetText().ToLower() == "f"))
+            {
+                var f = VisitExpression(context.expression(experssionCounter++));
+                if (f is float)
+                    F = (float)f;
+                else if (f is int)
+                    F = (int)f;
+                else
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010018") + "\r\n in Line: " + context.Start.Line);
+            }
+            if (context.children.Any(a => a.GetText().ToLower() == "con"))
+            {
+                var con = VisitExpression(context.expression(experssionCounter));
+                if (con is int)
+                {
+                    switch ((int)con)
+                    {
+                        case 1:
+                            con = 1;
+                            break;
+                        case 0:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                    }
+
+                }
+                else if (con is bool)
+                {
+                    switch ((bool)con)
+                    {
+                        case true:
+                            con = 1;
+                            break;
+                        case false:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                    }
+                }
+                else
+                {
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+
+            op.Data = new { point = pnt, F, Con };
+            _operations.Add(op);
+            var p = pnt.Value as Point6R;
+            p.F = F;
+            p.Con = Con;
+            Traj = new List<TrajectoryPointList[]>();
+            var result= GenerateLIN(p);
+            if (!RunCode) return null;
+            if (result)
+            {
+                GcodeExecute();
+                TrajectoryViewModel.SleepEvent.WaitOne();
+            }
+            return null;
+
+        }
+
+        // DONE
+        public override object VisitSTATPTP(SixRGrammerParser.STATPTPContext context)
+        {
+            Finished = false;
+            var op = new Operation();
+            Variable pnt = null;
+            var experssionCounter = 0;
+            float F = -1;
+            int Con = 1;
+            var walker = context.GetChild(1);
+            if (walker is SixRGrammerParser.VariableNameContext)
+            {
+                var point = _variables.FirstOrDefault(a => (a.Type == PrimitiveType.POINTJ || a.Type == PrimitiveType.POINTX) && a.Name == walker.GetText());
+                if (point == null)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " + context.Start.Line);
+                op.Act = Action.PTP;
+                pnt = point;
+                op.Child = null;
+
+            }
+            else if (walker is SixRGrammerParser.SixRJXPointContext)
+            {
+                var point = new Variable
+                {
+                    Name = null,
+                    IsArray = false,
+                    Type = PrimitiveType.POINTX
+                };
+                if ((walker as SixRGrammerParser.SixRJXPointContext).GetChild(0) is SixRGrammerParser.SixRJPointContext)
+                    point.Type = PrimitiveType.POINTJ;
+                point.Value = VisitSixRJXPoint(walker as SixRGrammerParser.SixRJXPointContext);
+                op.Act = Action.PTP;
+                pnt = point;
+                op.Child = null;
+            }
+
+            if (context.children.Any(a => a.GetText().ToLower() == "f"))
+            {
+                var f = VisitExpression(context.expression(experssionCounter++));
+                if (f is float)
+                    F = (float)f;
+                else if (f is int)
+                    F = (int)f;
+                else
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010018") + "\r\n in Line: " + context.Start.Line);
+            }
+            if (context.children.Any(a => a.GetText().ToLower() == "con"))
+            {
+                var con = VisitExpression(context.expression(experssionCounter));
+                if (con is int)
+                {
+                    switch ((int)con)
+                    {
+                        case 1:
+                            con = 1;
+                            break;
+                        case 0:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                    }
+
+                }
+                else if (con is bool)
+                {
+                    switch ((bool)con)
+                    {
+                        case true:
+                            con = 1;
+                            break;
+                        case false:
+                            con = 0;
+                            break;
+                        default:
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                    }
+                }
+                else
+                {
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010019") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            op.Data = new { point = pnt, F, Con };
+            _operations.Add(op);
+            var p = pnt.Value as Point6R;
+            p.F = F;
+            p.Con = Con;
+            Traj = new List<TrajectoryPointList[]>();
+            var result= GeneratePTP(p, context.start.Line.ToString());
+            if (!RunCode) return null;
+            if (result)
+            {
+                GcodeExecute();
+                TrajectoryViewModel.SleepEvent.WaitOne();
+            }
+            return null;
+        }
+
+        // DONE
+        public override object VisitAssignmentExpression(SixRGrammerParser.AssignmentExpressionContext context)
+        {
+            if (context.ChildCount == 3)
+            {
+                var name = context.GetChild(0).GetText();
+                var index = 0;
+                Variable _var;
+                var ind = name.IndexOf('[');
+                bool isArray = true;
+                if (ind == -1)
+                {
+                    isArray = false;
+                    ind = name.Length;
+                    _var = _variables.FirstOrDefault(a => a.Name == name);
+                    if (_var == null)
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " +
+                                            context.Start.Line);
+                }
+                else
+                {
+
+                    var array = name.Substring(ind).Replace("[", "").Replace("]", "").Split(',');
+                    name = name.Substring(0, ind);
+                    _var = _variables.FirstOrDefault(a => a.Name == name);
+                    if (_var == null)
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " +
+                                            context.Start.Line);
+                    if (_var.IsReadOnly)
+                        throw new Exception("");
+
+                    var dim = array.Length;
+                    if (_var.ArrayDim.Count != dim)
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010003") + "\r\n in Line: " +
+                                            context.Start.Line);
+                    List<int> dims = new List<int>();
+                    for (int i = 0; i < dim; i++)
+                    {
+                        int tmp = -1;
+                        if (int.TryParse(array[i], out tmp))
+                            dims.Add(tmp);
+                        else
+                            throw new Exception("");
+                    }
+                    for (int i = 0; i < dim; i++)
+                    {
+                        if (dims[i] < 1 || dims[i] > _var.ArrayDim[i])
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010003") + "\r\n in Line: " +
+                                                context.Start.Line);
+                    }
+
+                    for (int i = 0; i < dim; i++)
+                    {
+                        var coeff = 1;
+                        for (int j = i - 1; j >= 0; j--)
+                            coeff *= _var.ArrayDim[j];
+                        index += (dims[i] - 1) * coeff;
+                    }
+
+                }
+
+
+                if (_var.IsReadOnly)
+                    throw new Exception("");
+
+                var value = VisitExpression(context.expression());
+                if (name == "_sixR_DO")
+                {
+                    if (value is bool)
+                    {
+                        var tmpDO = _ctrlr.DigitalOutputs;
+                        tmpDO[index] = (bool)value;
+                        _ctrlr.DigitalOutputs = tmpDO;
+
+                    }
+                    else
+                        throw new Exception();
+                }
+                if (isArray)
+                {
+                    var vals = _var.Value as List<object>;
+                    vals[index] = value;
+                    _var.Value = vals;
+                }
+                else
+                {
+                    _var.Value = value;
+                }
+            }
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitSTATBRAKE(SixRGrammerParser.STATBRAKEContext context)
+        {
+            var walker = context.Parent;
+            while (!(walker is SixRGrammerParser.RoutineBodyContext || isLoopOperator(walker)))
+                walker = walker.Parent;
+            if (walker is SixRGrammerParser.RoutineBodyContext)
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010023") + "\r\n in Line: " + context.Start.Line);
+            shallIBreak = true;
+            howToBreak = walker;
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitSTATCONTINUE(SixRGrammerParser.STATCONTINUEContext context)
+        {
+            var walker = context.Parent;
+            while (!(walker is SixRGrammerParser.RoutineBodyContext || isLoopOperator(walker)))
+                walker = walker.Parent;
+            if (walker is SixRGrammerParser.RoutineBodyContext)
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010024") + "\r\n in Line: " + context.Start.Line);
+            shallIContinue = true;
+            howToContinue = walker;
+            return null;
+        }
+
+        public override object VisitStatementList(SixRGrammerParser.StatementListContext context)
+        {
+
+
+            for (var i = 0; i < context.ChildCount; i++)
+            {
+                if (isPuased)
+                    TrajectoryViewModel.SleepEvent.WaitOne();
+                if (isStoped)
+                    return null;
+                if (shallIBreak)
+                    break;
+                if (shallIContinue)
+                    break;
+                var stat = context.statement(i);
+                Application.Current.Dispatcher.Invoke(new System.Action(() =>
+                {
+                    if (TrajectoryViewModel.ColoringLine != null && TrajectoryViewModel.TextEditor != null)
+                    {
+                        TrajectoryViewModel.ColoringLine.curtLine = stat.Start.Line;
+                        TrajectoryViewModel.TextEditor.TextArea.TextView.Redraw();
+                    }
+                }));
+                if (stat is SixRGrammerParser.STATIFContext)
+                    VisitSTATIF(stat as SixRGrammerParser.STATIFContext);
+                else if (stat is SixRGrammerParser.STATFORContext)
+                    VisitSTATFOR(stat as SixRGrammerParser.STATFORContext);
+                else if (stat is SixRGrammerParser.STATPTPContext)
+                    VisitSTATPTP(stat as SixRGrammerParser.STATPTPContext);
+                else if (stat is SixRGrammerParser.STATLINContext)
+                    VisitSTATLIN(stat as SixRGrammerParser.STATLINContext);
+                else if (stat is SixRGrammerParser.STATCIRContext)
+                    VisitSTATCIR(stat as SixRGrammerParser.STATCIRContext);
+                else if (stat is SixRGrammerParser.STATBRAKEContext)
+                    VisitSTATBRAKE(stat as SixRGrammerParser.STATBRAKEContext);
+                else if (stat is SixRGrammerParser.STATCONTINUEContext)
+                    VisitSTATCONTINUE(stat as SixRGrammerParser.STATCONTINUEContext);
+                else if (stat is SixRGrammerParser.STATWHILEContext)
+                    VisitSTATWHILE(stat as SixRGrammerParser.STATWHILEContext);
+                else if (stat is SixRGrammerParser.STATWAITSECContext)
+                    VisitSTATWAITSEC(stat as SixRGrammerParser.STATWAITSECContext);
+                else
+                    VisitChildren(stat);
+            }
+            return null;
+        }
+
+        public override object VisitSTATIF(SixRGrammerParser.STATIFContext context)
+        {
+            var condition = VisitExpression(context.expression());
+            if (!(condition is bool))
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010022") + "\r\n in Line: " + context.Start.Line);
+            if ((bool)condition)
+                VisitStatementList(context.statementList(0));
+            if (context.ELSE() != null && !((bool)condition))
+                VisitStatementList(context.statementList(1));
+            return null;
+        }
+
+        public override object VisitSTATWHILE(SixRGrammerParser.STATWHILEContext context)
+        {
+            var cond = VisitExpression(context.expression());
+            if (!(cond is bool))
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010022") + "\r\n in Line: " + context.Start.Line);
+            while ((bool)cond)
+            {
+                if (shallIBreak && howToBreak == context)
+                {
+                    shallIBreak = false;
+                    howToBreak = null;
+                    break;
+                }
+                if (shallIContinue && howToContinue == context)
+                {
+                    shallIContinue = false;
+                    howToContinue = null;
+                }
+                VisitStatementList(context.statementList());
+                cond = VisitExpression(context.expression());
+                if (isStoped)
+                    return null;
+            }
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitSTATFOR(SixRGrammerParser.STATFORContext context)
+        {
+            var _var = new Variable() { IsArray = false, Type = PrimitiveType.INT, Name = context.IDENTIFIER().ToString() };
+            var from = VisitExpression(context.expression(0));
+            if (!(from is int))
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010017") + "\r\n in Line: " + context.Start.Line);
+            var to = VisitExpression(context.expression(1));
+            if (!(to is int))
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010017") + "\r\n in Line: " + context.Start.Line);
+            _variables.Add(_var);
+            for (var i = (int)from; i <= (int)to; i++)
+            {
+                _var.Value = i;
+                if (shallIBreak && howToBreak == context)
+                {
+                    shallIBreak = false;
+                    howToBreak = null;
+                    break;
+                }
+                if (shallIContinue && howToContinue == context)
+                {
+                    shallIContinue = false;
+                    howToContinue = null;
+                }
+                VisitStatementList(context.statementList());
+                if (isStoped)
+                    return null;
+            }
+            _variables.Remove(_var);
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRVarialbleDeclertion(SixRGrammerParser.SixRVarialbleDeclertionContext context)
+        {
+            var _var = new Variable();
+            IParseTree walker;
+            var type = context.children[0];
+            walker = type.GetChild(0);
+            while (walker.ChildCount > 0) walker = walker.GetChild(0);
+            var _primitiveType = (PrimitiveType)Enum.Parse(typeof(PrimitiveType), walker.GetText().ToUpper());
+            _var.Type = _primitiveType;
+            var name = context.children[1];
+            if (name.ChildCount == 1)
+            {
+                walker = name.GetChild(0);
+                while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                _var.Name = walker.GetText();
+                _var.IsArray = false;
+                _var.ArrayLength = 0;
+            }
+            else
+            {
+                walker = name.GetChild(0);
+                while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                _var.Name = walker.GetText();
+                _var.ArrayDim = new List<int>();
+                walker = name.GetChild(1);
+                var allLen = 0;
+                var dim = (walker.ChildCount - 1) / 2;
+                if (((walker.ChildCount + 1) / 2.0) != ((walker.ChildCount + 1) / 2))
+                    throw new Exception("Invalid Array Difinition.");
+                _var.ArrayLength = dim > 0 ? 1 : 0;
+                for (int i = 1; i < walker.ChildCount; i += 2)
+                {
+                    var childWalker = walker.GetChild(i);
+                    var tmp = VisitExpression(childWalker as SixRGrammerParser.ExpressionContext);
+                    _var.ArrayLength = _var.ArrayLength * (int)tmp;
+                    _var.ArrayDim.Add(int.Parse(childWalker.GetText()));
+                    _var.IsArray = true;
+                }
+            }
+            var val = context.children[2];
+            if (val is SixRGrammerParser.VariableListRestContext)
+            {
+                _var.Value = null;
+                _variables.Add(_var);
+
+                var restCount = val.ChildCount / 2;
+                for (int j = 1; j < val.ChildCount; j += 2)
+                {
+                    _var = new Variable() { Type = _primitiveType };
+                    var Subname = val.GetChild(j); // children[j];
+                    if (Subname.ChildCount == 1)
+                    {
+                        walker = Subname.GetChild(0);
+                        while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                        _var.Name = walker.GetText();
+                        _var.IsArray = false;
+                        _var.ArrayLength = 0;
+                    }
+                    else
+                    {
+                        _var.ArrayDim = new List<int>();
+                        walker = Subname.GetChild(0);
+                        while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                        _var.Name = walker.GetText();
+                        walker = Subname.GetChild(1);
+                        var allLen = 0;
+                        //if()
+                        var dim = (walker.ChildCount - 1) / 2;
+                        if (((walker.ChildCount + 1) / 2.0) != ((walker.ChildCount + 1) / 2))
+                            throw new Exception("Invalid Array Difinition.");
+                        _var.ArrayLength = dim > 0 ? 1 : 0;
+                        for (int i = 1; i < walker.ChildCount; i += 2)
+                        {
+                            var childWalker = walker.GetChild(i);
+                            //while (childWalker.ChildCount > 0) childWalker = childWalker.GetChild(0);
+                            var tmp = VisitExpression(childWalker as SixRGrammerParser.ExpressionContext);
+                            _var.ArrayLength = _var.ArrayLength * (int)tmp;
+                            _var.ArrayDim.Add(int.Parse(childWalker.GetText()));
+                            _var.IsArray = true;
+                        }
+                    }
+                    _var.Value = null;
+                    _variables.Add(_var);
+                }
+            }
+            else if (val is SixRGrammerParser.SixRVariableInitialisationContext)
+            {
+                walker = val.GetChild(1);
+                var output = VisitSixRVariableInitialisation(context.sixRVariableInitialisation()) as Point6R;
+                if (_var.IsArray)
+                {
+                    List<object> objs = new List<object>();
+                    for (int i = 0; i < _var.ArrayLength; i++)
+                        objs.Add(output);
+                    _var.Value = objs;
+                }
+                else
+                {
+                    _var.Value = output;
+                }
+                _variables.Add(_var);
+            }
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRVariableInitialisation(SixRGrammerParser.SixRVariableInitialisationContext context)
+        {
+            return context.ChildCount > 0 ? VisitSixRJXPoint(context.sixRJXPoint()) : null;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRJXPoint(SixRGrammerParser.SixRJXPointContext context)
+        {
+            if (context.GetChild(0) is SixRGrammerParser.SixRXPointContext)
+                return VisitSixRXPoint(context.sixRXPoint());
+            if (context.GetChild(0) is SixRGrammerParser.SixRJPointContext)
+                return VisitSixRJPoint(context.sixRJPoint());
+            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010016") + "\r\n in Line: " + context.Start.Line);
+        }
+
+        // DONE PASSED
+        public override object VisitSixRJPoint(SixRGrammerParser.SixRJPointContext context)
+        {
+            var point = new Point6R(new double[6], new bool[6], false);
+            if (context.ChildCount / 2 != context.ChildCount / 2.0F)
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+            for (var i = 1; i < context.ChildCount - 1; i += 2)
+            {
+                float tmp;
+                if (!float.TryParse(VisitExpression(context.expression(i / 2)).ToString(), out tmp))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010015") + "\r\n in Line: " + context.Start.Line);
+                switch (context.GetChild(i).GetText()[1])
+                {
+                    case '1':
+                        point.Js[0] = (float)tmp;
+                        point.ValidVals[0] = true;
+                        break;
+                    case '2':
+                        point.Js[1] = (float)tmp;
+                        point.ValidVals[1] = true;
+                        break;
+                    case '3':
+                        point.Js[2] = (float)tmp;
+                        point.ValidVals[2] = true;
+                        break;
+                    case '4':
+                        point.Js[3] = (float)tmp;
+                        point.ValidVals[3] = true;
+                        break;
+                    case '5':
+                        point.Js[4] = (float)tmp;
+                        point.ValidVals[4] = true;
+                        break;
+                    case '6':
+                        point.Js[5] = (float)tmp;
+                        point.ValidVals[5] = true;
+                        break;
+                    default:
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            return point;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRXPoint(SixRGrammerParser.SixRXPointContext context)
+        {
+            var point = new Point6R(new double[6], new bool[6], true);
+            var position = (Point6R)VisitSixRPositionVector(context.sixRPositionVector());
+            for (var i = 0; i < 3; i++)
+            {
+                point.Eulars[i] = position.Eulars[i];
+                point.ValidVals[i] = position.ValidVals[i];
+            }
+            var rotation = (Point6R)VisitSixRRotationVector(context.sixRRotationVector());
+            for (var i = 3; i < 6; i++)
+            {
+                point.Eulars[i] = rotation.Eulars[i];
+                point.ValidVals[i] = rotation.ValidVals[i];
+            }
+            return point;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRPositionVector(SixRGrammerParser.SixRPositionVectorContext context)
+        {
+            var point = new Point6R(new double[6], new bool[6], true);
+            if (context.ChildCount / 2 != context.ChildCount / 2.0F)
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+            for (var i = 0; i < context.ChildCount; i += 2)
+            {
+                float tmp;
+                if (!float.TryParse(VisitExpression(context.expression(i / 2)).ToString(), out tmp))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010015") + "\r\n in Line: " + context.Start.Line);
+                switch (context.GetChild(i).GetText()[0])
+                {
+                    case 'X':
+                        point.Eulars[0] = (float)tmp;
+                        point.ValidVals[0] = true;
+                        break;
+                    case 'Y':
+                        point.Eulars[1] = (float)tmp;
+                        point.ValidVals[1] = true;
+                        break;
+                    case 'Z':
+                        point.Eulars[2] = (float)tmp;
+                        point.ValidVals[2] = true;
+                        break;
+                    default:
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            return point;
+        }
+
+        // DONE PASSED
+        public override object VisitSixRRotationVector(SixRGrammerParser.SixRRotationVectorContext context)
+        {
+            var point = new Point6R(new double[6], new bool[6], true);
+            if (context.ChildCount / 2 != context.ChildCount / 2.0F)
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+            for (var i = 0; i < context.ChildCount; i += 2)
+            {
+                float tmp;
+                if (!float.TryParse(VisitExpression(context.expression(i / 2)).ToString(), out tmp))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010015") + "\r\n in Line: " + context.Start.Line);
+                switch (context.GetChild(i).GetText()[0])
+                {
+                    case 'A':
+                        point.Eulars[3] = (float)tmp;
+                        point.ValidVals[3] = true;
+                        break;
+                    case 'B':
+                        point.Eulars[4] = (float)tmp;
+                        point.ValidVals[4] = true;
+                        break;
+                    case 'C':
+                        point.Eulars[5] = (float)tmp;
+                        point.ValidVals[5] = true;
+                        break;
+                    default:
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010014") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            return point;
+        }
+
+        // DONE PASSED
+        public override object VisitVariableDeclaration(SixRGrammerParser.VariableDeclarationContext context)
+        {
+            var _var = new Variable();
+            var type = context.children[0];
+            // GET TYPE
+            var walker = type.GetChild(0);
+            while (walker.ChildCount > 0) walker = walker.GetChild(0);
+            var primitiveType = (PrimitiveType)Enum.Parse(typeof(PrimitiveType), walker.GetText().ToUpper());
+            _var.Type = primitiveType;
+            var name = context.children[1];
+
+            // GET NAME
+            if (name.ChildCount == 1)
+            {   // Single value
+                walker = name.GetChild(0);
+                while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                _var.Name = walker.GetText();
+                _var.IsArray = false;
+                _var.ArrayLength = 1;
+            }
+            else
+            {   // Array
+                walker = name.GetChild(0);
+                while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                _var.Name = walker.GetText();
+                _var.ArrayDim = new List<int>();
+                walker = name.GetChild(1);
+                var dim = (walker.ChildCount - 1) / 2;
+                if ((((walker.ChildCount + 1) / 2.0) != ((walker.ChildCount + 1) / 2)) || dim < 0)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010013") + "\r\n in Line: " + context.Start.Line);
+                _var.ArrayLength = 1;
+                for (var i = 1; i < walker.ChildCount; i += 2)
+                {
+                    var childWalker = walker.GetChild(i);
+                    var tmp = VisitExpression(childWalker as SixRGrammerParser.ExpressionContext);
+                    _var.ArrayLength = _var.ArrayLength * (int)tmp;
+                    _var.ArrayDim.Add(int.Parse(childWalker.GetText()));
+                }
+                _var.IsArray = true;
+            }
+
+            // GET LAST PART
+            var val = context.children[2];
+            if (val is SixRGrammerParser.VariableListRestContext)
+            {
+                _var.Value = null;
+                _variables.Add(_var);
+
+                var restCount = val.ChildCount / 2;
+                for (var j = 1; j < val.ChildCount; j += 2)
+                {
+                    _var = new Variable() { Type = primitiveType };
+                    var Subname = val.GetChild(j);
+                    if (Subname.ChildCount == 1)
+                    {
+                        walker = Subname.GetChild(0);
+                        while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                        _var.Name = walker.GetText();
+                        _var.IsArray = false;
+                        _var.ArrayLength = 1;
+                    }
+                    else
+                    {
+                        _var.ArrayDim = new List<int>();
+                        walker = Subname.GetChild(0);
+                        while (walker.ChildCount > 0) walker = walker.GetChild(0);
+                        _var.Name = walker.GetText();
+                        walker = Subname.GetChild(1);
+                        var dim = (walker.ChildCount - 1) / 2;
+                        if ((((walker.ChildCount + 1) / 2.0) != ((walker.ChildCount + 1) / 2)) || dim < 0)
+                            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010013") + "\r\n in Line: " + context.Start.Line);
+                        _var.ArrayLength = dim > 0 ? 1 : 0;
+                        for (var i = 1; i < walker.ChildCount; i += 2)
+                        {
+                            var childWalker = walker.GetChild(i);
+                            var tmp = VisitExpression(childWalker as SixRGrammerParser.ExpressionContext);
+                            _var.ArrayLength = _var.ArrayLength * (int)tmp;
+                            _var.ArrayDim.Add(int.Parse(childWalker.GetText()));
+                        }
+                        _var.IsArray = true;
+                    }
+                    _var.Value = null;
+                    _variables.Add(_var);
+                }
+            }
+            else if (val is SixRGrammerParser.VariableInitialisationContext)
+            {
+                var output = VisitVariableInitialisation(context.variableInitialisation());
+                if (_var.IsArray)
+                {
+                    var objs = new List<object>();
+                    for (var i = 0; i < _var.ArrayLength; i++)
+                        objs.Add(output);
+                    _var.Value = objs;
+                }
+                else
+                {
+                    _var.Value = output;
+                }
+                _variables.Add(_var);
+            }
+            return null;
+        }
+
+        // DONE PASSED
+        public override object VisitVariableInitialisation(SixRGrammerParser.VariableInitialisationContext context)
+        {
+            return VisitExpression(context.expression());
+        }
+
+        // DONE PASSED
+        public override object VisitExpression(SixRGrammerParser.ExpressionContext context)
+        {
+            var res = VisitConditionalOrExpression(context.conditionalOrExpression(0));
+            for (var i = 1; i < (context.ChildCount + 1) / 2; i++)
+            {
+                var outout = VisitConditionalOrExpression(context.conditionalOrExpression(i));
+                if (!(((outout is bool) && (res is bool)) ||
+                    ((outout is int) && (res is int)) ||
+                    ((outout is int) && (res is float)) ||
+                    ((outout is string) && (res is string)) ||
+                    ((outout is float) && (res is float)) ||
+                    ((outout is char) && (res is char)) ||
+                    ((outout is float) && (res is int))))
+                {
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010011") + "\r\n in Line: " + context.Start.Line);
+                }
+                var op = context.GetChild(i * 2 - 1).GetText();
+                switch (op)
+                {
+                    case "==":
+                        res = ((dynamic)res == (dynamic)outout);
+                        break;
+                    case "!=":
+                        res = ((dynamic)res != (dynamic)outout);
+                        break;
+                    case "<=":
+                        res = ((dynamic)res <= (dynamic)outout);
+                        break;
+                    case ">=":
+                        res = ((dynamic)res >= (dynamic)outout);
+                        break;
+                    case "<":
+                        res = ((dynamic)res < (dynamic)outout);
+                        break;
+                    case ">":
+                        res = ((dynamic)res > (dynamic)outout);
+                        break;
+                    default:
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010012") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+
+            return res;
+        }
+
+        // DONE PASSED
+        public override object VisitConditionalOrExpression(SixRGrammerParser.ConditionalOrExpressionContext context)
+        {
+            if (context.ChildCount == 1) return VisitExclusiveOrExpression(context.exclusiveOrExpression(0));
+            for (var i = 0; i < (context.ChildCount + 1) / 2; i++)
+            {
+                var outout = VisitExclusiveOrExpression(context.exclusiveOrExpression(i));
+                if (!(outout is bool))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010010") + "\r\n in Line: " + context.Start.Line);
+                if ((bool)outout)
+                    return true;
+            }
+            return false;
+        }
+
+        // DONE PASSED
+        public override object VisitExclusiveOrExpression(SixRGrammerParser.ExclusiveOrExpressionContext context)
+        {
+            if (context.ChildCount == 1) return VisitConditionalAndExpression(context.conditionalAndExpression(0));
+            var output = VisitConditionalAndExpression(context.conditionalAndExpression(0));
+            if (!(output is bool))
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010009") + "\r\n in Line: " + context.Start.Line);
+            var xor = ((bool)output);
+            for (var i = 1; i < (context.ChildCount + 1) / 2; i++)
+            {
+                output = VisitConditionalAndExpression(context.conditionalAndExpression(i));
+                if (!(output is bool))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010009") + "\r\n in Line: " + context.Start.Line);
+                xor = (bool)output != xor;
+            }
+            return xor;
+        }
+
+        // DONE PASSED
+        public override object VisitConditionalAndExpression(SixRGrammerParser.ConditionalAndExpressionContext context)
+        {
+            if (context.ChildCount == 1) return VisitAdditiveExpression(context.additiveExpression(0));
+            for (var i = 0; i < (context.ChildCount + 1) / 2; i++)
+            {
+                var outout = VisitAdditiveExpression(context.additiveExpression(i));
+                if (!(outout is bool))
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010008") + "\r\n in Line: " + context.Start.Line);
+                if (!(bool)outout)
+                    return false;
+            }
+            return true;
+        }
+
+        // DONE PASSED
+        public override object VisitAdditiveExpression(SixRGrammerParser.AdditiveExpressionContext context)
+        {
+            object sum = 0;
+            var isFloat = false;
+            if (context.ChildCount == 1) return VisitMultiplicativeExpression(context.multiplicativeExpression(0));
+            for (var i = 0; i < (context.ChildCount + 1) / 2; i++)
+            {
+                var outout = VisitMultiplicativeExpression(context.multiplicativeExpression(i));
+                if (outout is int && !isFloat)
+                {
+                    if (i - 1 < 0 || context.GetChild(i * 2 - 1).GetText() == "+")
+                    {
+                        sum = (int)sum + (int)outout;
+
+                    }
+                    else
+                    {
+                        sum = (int)sum - (int)outout;
+                    }
+
+                }
+                else if (outout is float)
+                {
+                    if (i - 1 < 0 || context.GetChild(i * 2 - 1).GetText() == "+")
+                    {
+                        if (sum is float)
+                            sum = (float)sum + (float)outout;
+                        else
+                            sum = (int)sum + (float)outout;
+                    }
+                    else
+                    {
+                        if (sum is float)
+                            sum = (float)sum - (float)outout;
+                        else
+                            sum = (int)sum - (float)outout;
+                    }
+                    isFloat = true;
+                }
+                else
+                {
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010007") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            return sum;
+        }
+
+        // DONE PASSED
+        public override object VisitMultiplicativeExpression(SixRGrammerParser.MultiplicativeExpressionContext context)
+        {
+            object mul = 1;
+            var isFloat = false;
+            if (context.ChildCount == 1) return VisitUnaryNotExpression(context.unaryNotExpression(0));
+            for (var i = 0; i < (context.ChildCount + 1) / 2; i++)
+            {
+                var outout = VisitUnaryNotExpression(context.unaryNotExpression(i));
+                if (outout is int && !isFloat)
+                {
+                    if (i - 1 < 0 || context.GetChild(i * 2 - 1).GetText() == "*")
+                    {
+                        mul = (int)mul * (int)outout;
+
+                    }
+                    else
+                    {
+                        mul = (int)mul / (int)outout;
+                    }
+
+                }
+                else if (outout is float)
+                {
+                    if (i - 1 < 0 || context.GetChild(i * 2 - 1).GetText() == "*")
+                    {
+                        if (mul is float)
+                            mul = (float)mul * (float)outout;
+                        else
+                            mul = (int)mul * (float)outout;
+                    }
+                    else
+                    {
+                        if (mul is float)
+                            mul = (float)mul / (float)outout;
+                        else
+                            mul = (int)mul / (float)outout;
+                    }
+                    isFloat = true;
+                }
+                else
+                {
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010006") + "\r\n in Line: " + context.Start.Line);
+                }
+            }
+            return mul;
+        }
+
+        // DONE PASSED
+        public override object VisitUnaryNotExpression(SixRGrammerParser.UnaryNotExpressionContext context)
+        {
+            if (context.ChildCount == 1) return VisitUnaryPlusMinuxExpression(context.unaryPlusMinuxExpression());
+            var output = VisitUnaryNotExpression(context.unaryNotExpression());
+            if (output is bool)
+                return !((bool)output);
+            throw new Exception(SixRConstants.ResourceManager.GetString("AA0010005") + "\r\n in Line: " + context.Start.Line);
+        }
+
+        // DONE PASSED
+        public override object VisitUnaryPlusMinuxExpression(SixRGrammerParser.UnaryPlusMinuxExpressionContext context)
+        {
+            if (context.ChildCount == 1) return VisitPrimary(context.primary());
+            var output = VisitUnaryPlusMinuxExpression(context.unaryPlusMinuxExpression());
+            var sign = context.GetChild(0).GetText();
+            if (sign != "-" && sign != "+")
+                throw new Exception(SixRConstants.ResourceManager.GetString("AA0010004") + "\r\n in Line: " + context.Start.Line);
+            if (output is int)
+                return -((int)output);
+            if (output is float)
+                return -((float)output);
+            return output;
+        }
+
+        // DONE PASSED
+        public override object VisitPrimary(SixRGrammerParser.PrimaryContext context)
+        {
+            IParseTree walker = context.GetChild(0);
+            if (walker is SixRGrammerParser.LiteralContext)
+            {
+                return VisitLiteral(walker as SixRGrammerParser.LiteralContext);
+            }
+            if (walker is SixRGrammerParser.VariableNameContext)
+            {
+                var isArray = walker.ChildCount == 2;
+                if (!isArray)
+                {
+                    var output = _variables.FirstOrDefault(a => a.Name == walker.GetChild(0).GetText());
+                    if (output == null)
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " + context.Start.Line);
+                    return output.Value;
+                }
+                var dim = (walker.GetChild(1).ChildCount - 1) / 2;
+                var output1 = _variables.FirstOrDefault(a => a.Name == walker.GetChild(0).GetText());
+                if (output1 == null)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010002") + "\r\n in Line: " + context.Start.Line);
+                if (output1.ArrayDim.Count != dim)
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010003") + "\r\n in Line: " + context.Start.Line);
+                List<int> dims = new List<int>();
+                for (int i = 1; i <= dim * 2; i += 2)
+                {
+                    dims.Add((int)VisitExpression(walker.GetChild(1).GetChild(i) as SixRGrammerParser.ExpressionContext));
+                }
+                for (int i = 0; i < dim; i++)
+                {
+                    if (dims[i] < 1 || dims[i] > output1.ArrayDim[i])
+                        throw new Exception(SixRConstants.ResourceManager.GetString("AA0010003") + "\r\n in Line: " + context.Start.Line);
+                }
+                var index = 0;
+                for (int i = 0; i < dim; i++)
+                {
+                    var coeff = 1;
+                    for (int j = i - 1; j >= 0; j--)
+                        coeff *= output1.ArrayDim[j];
+                    index += (dims[i] - 1) * coeff;
+                }
+                return (output1.Value as List<object>)[index];
+            }
+            if (walker is SixRGrammerParser.ParExpressionContext)
+            {
+                return
+                    VisitExpression((walker as SixRGrammerParser.ParExpressionContext).expression());
+            }
+            return null;
+        }
+        */
+        // DONE PASSED
+        public override object VisitLiteral(SixRGrammerParser.LiteralContext context)
+        {
+            var walker = context.children[0];
+            while (walker.ChildCount != 0) walker = walker.GetChild(0);
+            var terminalNodeImpl = walker as TerminalNodeImpl;
+            if (terminalNodeImpl == null) return null;
+            switch (SixRGrammerLexer.DefaultVocabulary.GetSymbolicName(terminalNodeImpl.Symbol.Type))
+            {
+                case "FragINTLITERAL":
+                    return int.Parse(walker.GetText());
+                case "FragFLOATLITERAL":
+                    return float.Parse(walker.GetText());
+                case "FragCHARLITERAL":
+                    return char.Parse(walker.GetText().Remove(walker.GetText().Length - 2, 1).Remove(0, 1));
+                case "FragSTRINGLITERAL":
+                    return walker.GetText().Remove(walker.GetText().Length - 2, 1).Remove(0, 1);
+                case "TRUE":
+                    return true;
+                case "FALSE":
+                    return false;
+                default:
+                    throw new Exception(SixRConstants.ResourceManager.GetString("AA0010001") + "\r\n in Line: " + context.Start.Line);
+            }
+        }
+
+        public override object VisitBooleanLiteral(SixRGrammerParser.BooleanLiteralContext context)
+        {
+            return bool.Parse(context.GetText());
+        }
+
+        // DONE PASSED
+        public override object VisitIntLITERAL(SixRGrammerParser.IntLITERALContext context)
+        {
+            return int.Parse(context.GetText());
+        }
+
+        // DONE PASSED
+        public override object VisitFloatLITERAL(SixRGrammerParser.FloatLITERALContext context)
+        {
+            return float.Parse(context.GetText());
+        }
+
+        // DONE PASSED
+        public override object VisitCharLITERAL(SixRGrammerParser.CharLITERALContext context)
+        {
+            return char.Parse(context.GetText().Remove(context.GetText().Length - 2, 1).Remove(0, 1));
+        }
+
+        // DONE PASSED
+        public override object VisitStringLITERAL(SixRGrammerParser.StringLITERALContext context)
+        {
+            return context.GetText().Remove(context.GetText().Length - 2, 1).Remove(0, 1);
+        }
+        /*
+        //////////////////////////////////////////////////////////////////////////////////////////////
+        //      GCODE GENERATOR
+        //////////////////////////////////////////////////////////////////////////////////////////////
+
+        Traj7Seg _trj7;
+        private MyController _ctrlr;
+        private int pastingPointerOffset;
+        private bool currectCode = true;
+        //private CompletionWindow completionWindow;
+        TrajectoryPointList[] points = new TrajectoryPointList[6];
+        private List<int> LineIndexer = new List<int>();
+        private int NumberOfMs = 0;
+        //private TextEditor txtEditor;
+        private List<int> ReadDigitalIndicator = new List<int>();
+        private int GcodeLength = 0;
+        public static double[] GcodeActualPosition = new double[6];
+        public static int[][] ActualPosVal = new int[6][];
+        public static int ActualPosValLength;
+        public int Cnt;
+        private double lastF = 100;
+        //private SerialPort serialPort1;
+        private int LastIkSolutionBranchNumber = 0;
+        private bool IsVailMovement;
+        private double[] ValidJointSpace = { 165, 100, 95, 180, 100, 180 };
+        private double[] toolParam = new double[8];
+        private List<TrajectoryPointList[]> Traj = new List<TrajectoryPointList[]>();
+
+        public static bool Finished = false;
+        private void GcodeStart()
+        {
+            IsVailMovement = true;
+            LineIndexer = new List<int>();
+            Traj = new List<TrajectoryPointList[]>();
+            toolParam = SixRConstants.toolParam;
+            ReadDigitalIndicator = new List<int>();
+            double[] theta =
+            {
+                _ctrlr.MotorsEncoder[0]*UnitConverter.PulsToDegFactor[0],
+                _ctrlr.MotorsEncoder[1]*UnitConverter.PulsToDegFactor[1],
+                _ctrlr.MotorsEncoder[2]*UnitConverter.PulsToDegFactor[2],
+                _ctrlr.MotorsEncoder[3]*UnitConverter.PulsToDegFactor[3],
+                _ctrlr.MotorsEncoder[4]*UnitConverter.PulsToDegFactor[4],
+                _ctrlr.MotorsEncoder[5]*UnitConverter.PulsToDegFactor[5],
+            };
+            for (int i = 0; i < 6; i++)
+            {
+                GcodeActualPosition[i] = theta[i];
+            }
+        }
+
+        private bool GeneratePTP(Point6R point, string Line)
+        {
+            if (!point.IsEular)
+            {
+                var tmppoints = new TrajectoryPointList[6];
+                var tmpKeys = new List<string>();
+                tmpKeys.AddRange(new string[] { "J1", "J2", "J3", "J4", "J5", "J6", "F", "CON" });
+                var tmpVals = new List<double>();
+                tmpVals.AddRange(new double[]
+                {
+                    GcodeActualPosition[0], GcodeActualPosition[1], GcodeActualPosition[2], GcodeActualPosition[3],
+                    GcodeActualPosition[4], GcodeActualPosition[5], lastF, 1
+                });
+                for (var i = 0; i < 6; i++)
+                {
+                    if (point.ValidVals[i])
+                        tmpVals[i] = point.Js[i];
+                }
+                var tolerance = .00001;
+                if (Math.Abs(point.F - (-1)) > tolerance)
+                    tmpVals[6] = point.F;
+                if (Math.Abs(point.Con - (-1)) > tolerance)
+                    tmpVals[7] = point.Con;
+                var tarjectory = _trj7.PTPList(GcodeActualPosition, tmpKeys, tmpVals);
+                if (tarjectory[0].TrajLength > 0)
+                {
+                    Traj.Add(tarjectory);
+                    for (int j = 0; j < 6; j++)
+                    {
+                        GcodeActualPosition[j] = Traj[Traj.Count - 1][j].q[Traj[Traj.Count - 1][j].TrajLength - 1];
+                    }
+                    return true;
+                }
+                return false;
+            }
+            else
+            {
+                var cartesianPosition = _trj7.GetCartPos(GcodeActualPosition.Select(a => a * (Math.PI / 180)).ToArray(), toolParam);
+                var rpy = _trj7.toEulerianAngle(new DenseVector(cartesianPosition));
+                var tmpKeys = new List<string>();
+                tmpKeys.AddRange(new string[] { "X", "Y", "Z", "A", "B", "C", "F", "CON" });
+                var tmpVals = new List<double>();
+                tmpVals.AddRange(new double[] { 0, 0, 0, 0, 0, 0, lastF, 1 });
+                // for X,Y,Z
+                for (var i = 0; i < 3; i++)
+                {
+                    if (point.ValidVals[i])
+                        cartesianPosition[i + 5] = point.Eulars[i];
+                }
+                //for A,B,C
+                for (var i = 3; i < 6; i++)
+                {
+                    if (point.ValidVals[i])
+                        rpy[i - 3] = (float)Math.Round(point.Eulars[i] * (Math.PI / 180.0), 8);
+                }
+                var tolerance = .00001;
+                if (Math.Abs(point.F - (-1)) > tolerance)
+                    tmpVals[6] = point.F;
+                if (Math.Abs(point.Con - (-1)) > tolerance)
+                    tmpVals[7] = point.Con;
+
+                var quaternionOfRpy = _trj7.toQuaternion(rpy[0], rpy[1], rpy[2]);
+                for (int i = 0; i < 4; i++)
+                    cartesianPosition[i] = quaternionOfRpy[i];
+                var Ans = _trj7.Inversekinematic(cartesianPosition, toolParam);
+                bool[] ValidIkSolutionBranchNumber = { true, true, true, true, true, true, true, true };
+
+                for (int i = 0; i < 8; i++)
+                {
+                    for (int j = 0; j < 6; j++)
+                    {
+                        if (Math.Abs(Ans[i, j] * (180 / Math.PI)) > ValidJointSpace[j])
+                            ValidIkSolutionBranchNumber[i] = false;
+                    }
+                }
+                var jointDisplacement = new double[8];
+                var min = 0;
+                for (int i = 0; i < 8; i++)
+                {
+                    if (ValidIkSolutionBranchNumber[i])
+                    {
+                        for (int j = 0; j < 6; j++)
+                            jointDisplacement[i] += Math.Abs(Ans[i, j] - GcodeActualPosition[j] * Math.PI / 180.0);
+                    }
+                    else
+                    {
+                        jointDisplacement[i] = double.MaxValue;
+                    }
+                    if (jointDisplacement[i] < jointDisplacement[min])
+                        min = i;
+                }
+                LastIkSolutionBranchNumber = point.IkSolutionBranchNumber = min;
+                for (int i = 0; i < SixRConstants.NumberOfAxis; i++)
+                {
+                    tmpVals[i] = Ans[LastIkSolutionBranchNumber, i] * (180 / Math.PI);
+                }
+
+                var tarjectory = _trj7.PTPList(GcodeActualPosition, tmpKeys, tmpVals);
+                if (tarjectory[0].TrajLength > 0)
+                {
+                    Traj.Add(tarjectory);
+                    for (int j = 0; j < 6; j++)
+                    {
+                        GcodeActualPosition[j] = Traj[Traj.Count - 1][j].q[Traj[Traj.Count - 1][j].TrajLength - 1];
+                    }
+                    return true;
+                    
+                }
+                return false;
+            }
+        }
+
+        private bool GenerateLIN(Point6R point)
+        {
+            if (!point.IsEular)
+            {
+                throw new Exception("Point Must be in Eular");
+            }
+            var tmpPos = _trj7.GetCartPos(GcodeActualPosition.Select(a => a * (Math.PI / 180)).ToArray(), toolParam);
+            var currentPos = tmpPos.Select(a => a).ToArray();
+            var rpy = _trj7.toEulerianAngle(new DenseVector(tmpPos));
+            var tmpKeys = new List<string>();
+            tmpKeys.AddRange(new string[] { "X", "Y", "Z", "A", "B", "C", "F", "CON" });
+            var tmpVals = new List<double>();
+            tmpVals.AddRange(new double[] { 0, 0, 0, 0, 0, 0, lastF, 1 });
+            // for X,Y,Z
+            for (var i = 0; i < 3; i++)
+            {
+                if (point.ValidVals[i])
+                    tmpPos[i + 5] = point.Eulars[i];
+            }
+            //for A,B,C
+            for (var i = 3; i < 6; i++)
+            {
+                if (point.ValidVals[i])
+                    rpy[i - 3] = (float)Math.Round(point.Eulars[i] * (Math.PI / 180.0), 8);
+            }
+            var tolerance = .00001;
+            if (Math.Abs(point.F - (-1)) > tolerance)
+                tmpVals[6] = point.F;
+            if (Math.Abs(point.Con - (-1)) > tolerance)
+                tmpVals[7] = point.Con;
+
+            var tmpRpy = _trj7.toQuaternion(rpy[0], rpy[1], rpy[2]);
+            for (int i = 0; i < 4; i++)
+                tmpPos[i] = tmpRpy[i];
+
+            var Ans = _trj7.Inversekinematic(currentPos, toolParam);
+            var Error = new double[8];
+            var min = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 6; j++)
+                    Error[i] += Math.Abs(Ans[i, j] - GcodeActualPosition[j] * Math.PI / 180.0);
+                if (Error[i] < Error[min])
+                    min = i;
+            }
+            LastIkSolutionBranchNumber = point.IkSolutionBranchNumber = min;
+
+            var distance =
+                    Math.Sqrt(Math.Pow(tmpPos[5] - currentPos[5], 2) + Math.Pow(tmpPos[6] - currentPos[6], 2) +
+                              Math.Pow(tmpPos[7] - currentPos[7], 2));
+            var pointList = _trj7.SingleAxisTraj(new TrajectoryPoint(0, 0), new TrajectoryPoint(distance, 0),
+                tmpVals[6], 5000, 10000, .001, .999);
+            var resultList = new TrajectoryPointList[SixRConstants.NumberOfAxis];
+            for (int i = 0; i < SixRConstants.NumberOfAxis; i++)
+                resultList[i] = new TrajectoryPointList();
+            var tmpTeta = new double[6];
+            var tmpCart = currentPos.Select(a => a).ToArray();
+            var Qend = tmpRpy;
+            for (int i = 0; i < pointList.TrajLength; i++)
+            {
+                var x = tmpCart[5] + (pointList.q[i] / distance) * (tmpPos[5] - tmpCart[5]);
+                var y = tmpCart[6] + (pointList.q[i] / distance) * (tmpPos[6] - tmpCart[6]);
+                var z = tmpCart[7] + (pointList.q[i] / distance) * (tmpPos[7] - tmpCart[7]);
+                var QCurrent =
+                    new DenseVector(new double[] { currentPos[0], currentPos[1], currentPos[2], currentPos[3] });
+                var Qnext = _trj7.Slerp(QCurrent.ToArray(), Qend.ToArray(), (pointList.q[i] / distance));
+                var res = _trj7.Inversekinematic(
+                    new[] { Qnext[0], Qnext[1], Qnext[2], Qnext[3], 0, x, y, z }, toolParam);
+                for (int j = 0; j < SixRConstants.NumberOfAxis; j++)
+                {
+                    if (Math.Abs(res[LastIkSolutionBranchNumber, j] * (180 / Math.PI)) >= ValidJointSpace[j])
+                        IsVailMovement = false;
+                    resultList[j].AddPoint(res[LastIkSolutionBranchNumber, j] * (180 / Math.PI), 0, 0);
+                }
+            }
+            Traj.Add(resultList);
+            for (int j = 0; j < 6; j++)
+            {
+                GcodeActualPosition[j] = Traj[Traj.Count - 1][j].q[Traj[Traj.Count - 1][j].TrajLength - 1];
+            }
+            return true;
+        }
+
+        private void GcodeExecute()
+        {
+            points = new TrajectoryPointList[6];
+            if (Traj.Count == 0)
+                return;
+            foreach (var val in Traj)
+            {
+                for (var j = 0; j < val[0].TrajLength; j++)
+                {
+                    for (var i = 0; i < SixRConstants.NumberOfAxis; i++)
+                    {
+                        if (points[i] == null)
+                            points[i] = new TrajectoryPointList();
+                        points[i].AddPoint(val[i].q[j] / UnitConverter.PulsToDegFactor[i], val[i].v[j], val[i].a[j]);
+                    }
+                }
+            }
+            _ctrlr.SetRegisterCtrWord(new ushort[] { 15, 15, 15, 15, 15, 15 });
+            _ctrlr.SetCommand((int)CommandsEnum.SetControlWord);
+            _ctrlr.SetSelectedMotors(new bool[] { true, true, true, true, true, true });
+            Cnt = 0;
+            //MainWindow.ActualPosValLength = 0;
+            //for (var i = 0; i < Constants.NumberOfAxis; i++)
+            //{
+            //    MainWindow.ActualPosVal[i] = new int[1000000];
+            //}
+            //_ctrlr.setLineNumbers(LineIndexer);
+            _ctrlr.InitilizeTrajectory(points);
+            Finished = true;
+            _ctrlr.SetCommand((int)CommandsEnum.StartTrajectory);
+            //MainWindow.SleepEvent.WaitOne();
+
+            //Thread.Sleep(5000);
+
+        }*/
+
+    }
+}

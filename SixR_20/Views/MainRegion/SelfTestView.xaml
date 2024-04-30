@@ -1,0 +1,231 @@
+﻿<UserControl x:Class="SixR_20.Views.MainRegion.SelfTestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:local="clr-namespace:SixR_20.Views.MainRegion"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             mc:Ignorable="d"
+             d:DesignHeight="300"
+             d:DesignWidth="300">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="8*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="8*" />
+            <RowDefinition Height="2*" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="1"
+              Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Name="StartSelfTest" Margin="5" Orientation="Horizontal">
+                <fa:FontAwesome Icon="ClockOutline"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=1}"
+                                Foreground="{StaticResource PrimaryBrush}"
+                                ></fa:FontAwesome>
+                <fa:FontAwesome Icon="CircleOutlineNotch"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=2}"
+                                Foreground="{StaticResource InfoBrush}"
+                                Spin="true"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Check"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=3}"
+                                Foreground="{StaticResource SuccessBrush}"
+                                ></fa:FontAwesome>
+                <fa:FontAwesome Icon="Exclamation"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=4}"
+                                Foreground="{StaticResource WarningBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Ban"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=5}"
+                                Foreground="{StaticResource DangerBrush}"></fa:FontAwesome>
+                <TextBlock Text="{Binding InitText}"
+                           Foreground="{StaticResource TextBrush}" Margin="5" FontSize="18"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Name="CreatController"
+                        Margin="5"
+                        Orientation="Horizontal">
+                <fa:FontAwesome Icon="ClockOutline"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CreateControllerVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=1}"
+                                Foreground="{StaticResource PrimaryBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="CircleOutlineNotch"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CreateControllerVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=2}"
+                                Foreground="{StaticResource InfoBrush}"
+                                Spin="true"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Check"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CreateControllerVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=3}"
+                                Foreground="{StaticResource SuccessBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Exclamation"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=4}"
+                                Foreground="{StaticResource WarningBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Ban"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=5}"
+                                Foreground="{StaticResource DangerBrush}"></fa:FontAwesome>
+                <TextBlock Text="{Binding CreateControllerText}"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="5"
+                           FontSize="18" />
+            </StackPanel>
+            <StackPanel Grid.Row="2"
+                        Name="TestDrives"
+                        Margin="5"
+                        Orientation="Horizontal">
+                <fa:FontAwesome Icon="ClockOutline"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding TestDrivesVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=1}"
+                                Foreground="{StaticResource PrimaryBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="CircleOutlineNotch"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding TestDrivesVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=2}"
+                                Foreground="{StaticResource InfoBrush}"
+                                Spin="true"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Check"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding TestDrivesVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=3}"
+                                Foreground="{StaticResource SuccessBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Exclamation"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=4}"
+                                Foreground="{StaticResource WarningBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Ban"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding SelfTestVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=5}"
+                                Foreground="{StaticResource DangerBrush}"></fa:FontAwesome>
+                <TextBlock Text="{Binding TestDrivesText}"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="5"
+                           FontSize="18" />
+            </StackPanel>
+            <StackPanel Grid.Row="3"
+                        Name="CheckDriveErrors"
+                        Margin="5"
+                        Orientation="Horizontal">
+                <fa:FontAwesome Icon="ClockOutline"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CheckDriveErrorVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=1}"
+                                Foreground="{StaticResource PrimaryBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="CircleOutlineNotch"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CheckDriveErrorVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=2}"
+                                Foreground="{StaticResource InfoBrush}"
+                                Spin="true"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Check"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CheckDriveErrorVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=3}"
+                                Foreground="{StaticResource SuccessBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Exclamation"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CheckDriveErrorVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=4}"
+                                Foreground="{StaticResource WarningBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Ban"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding CheckDriveErrorVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=5}"
+                                Foreground="{StaticResource DangerBrush}"></fa:FontAwesome>
+                <TextBlock Text="{Binding CheckDriveErrorText}"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="5"
+                           FontSize="18" />
+            </StackPanel>
+            <StackPanel Grid.Row="4"
+                        Name="Moving"
+                        Margin="5"
+                        Orientation="Horizontal">
+                <fa:FontAwesome Icon="ClockOutline"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding MovingVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=1}"
+                                Foreground="{StaticResource PrimaryBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="CircleOutlineNotch"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding MovingVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=2}"
+                                Foreground="{StaticResource InfoBrush}"
+                                Spin="true"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Check"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding MovingVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=3}"
+                                Foreground="{StaticResource SuccessBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Exclamation"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding MovingVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=4}"
+                                Foreground="{StaticResource WarningBrush}"></fa:FontAwesome>
+                <fa:FontAwesome Icon="Ban"
+                                Width="32"
+                                Height="32"
+                                FontSize="32"
+                                Visibility="{Binding MovingVisibility,Converter={StaticResource CompairNumberToBooleanConvertor},ConverterParameter=5}"
+                                Foreground="{StaticResource DangerBrush}"></fa:FontAwesome>
+                <TextBlock Text="{Binding MovingText}"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="5"
+                           FontSize="18" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

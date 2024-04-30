@@ -1,0 +1,6 @@
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerLexer.cs
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerParser.cs
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerListener.cs
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerBaseListener.cs
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerVisitor.cs
+F:\D\WorkSpace\TwinCat\SixR_20\SixR_20\obj\Debug\SixRGrammerBaseVisitor.cs

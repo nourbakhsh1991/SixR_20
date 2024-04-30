@@ -1,0 +1,820 @@
+﻿grammar SixRGrammer;
+
+
+//start : module;
+module
+   : routineBody EOF
+   ;
+routineBody
+   : routineDataSection  routineImplementationSection 
+   ;
+
+routineDataSection
+   : ( (variableDeclaration|sixRVarialbleDeclertion) NEWLINE )*
+   ;
+routineImplementationSection
+   : statementList
+   ;
+variableDeclaration
+   :  type variableName (variableListRest | variableInitialisation) 
+   ;
+variableDeclarationInDataList
+   : DECL? GLOBAL? CONST? (type variableName (variableListRest | variableInitialisation))
+   ;
+variableListRest
+   : (',' variableName)*
+   ;
+sixRVarialbleDeclertion
+	:
+		sixRprimitiveType variableName  (variableListRest|sixRVariableInitialisation)
+	;
+variableInitialisation
+   : '=' expression
+   ;
+sixRVariableInitialisation
+	: ('=' sixRJXPoint)?
+	;
+sixRJXPoint
+	: (sixRXPoint | sixRJPoint)
+	;
+sixRXPoint
+	: '(' sixRPositionVector sixRRotationVector ')'
+	;
+sixRPositionVector
+	: ( 'X:' expression )? ( 'Y:' expression)? ( 'Z:' expression)?
+	;
+sixRRotationVector
+	: ( 'A:' expression )? ( 'B:' expression)? ('C:' expression)?
+	;
+sixRJPoint
+	: '(' (  'J1:' expression )? (  'J2:' expression)? ( 'J3:' expression)? (  'J4:' expression )? (  'J5:' expression)? ( 'J6:' expression)? ')'
+	;
+sixRTreePoint
+	: ('X:' expression )? ('Y:' expression)? ('Z:' expression)?
+	;
+
+variableName
+   : IDENTIFIER (arrayVariableSuffix)?
+   ;
+arrayVariableSuffix
+   : '[' ( expression (',' expression)* )']'
+   ;
+
+
+statementList
+   : statement*
+   ;
+statement
+   : CONTINUE NEWLINE    # STATCONTINUE
+  // | EXIT NEWLINE    # STATEXIT
+   | FOR IDENTIFIER '=' expression TO expression NEWLINE statementList ENDFOR  NEWLINE?   # STATFOR
+  // | GOTO IDENTIFIER NEWLINE?    # STATGOTO
+  // | HALT NEWLINE?    # STATHALT
+   | IF expression THEN NEWLINE statementList (ELSE NEWLINE statementList)? ENDIF NEWLINE?    # STATIF
+  // | LOOP NEWLINE statementList ENDLOOP NEWLINE?    # STATLOOP
+  // | REPEAT NEWLINE statementList UNTIL expression NEWLINE?    # STATREPEAT
+  // | SWITCH expression NEWLINE switchBlockStatementGroups ENDSWITCH NEWLINE?    # STATSWITCH
+   | WAIT FOR expression NEWLINE?    # STATWAITFOR
+   | WAIT SEC expression NEWLINE?    # STATWAITSEC
+   | WHILE expression NEWLINE statementList ENDWHILE NEWLINE?    # STATWHILE
+  // | RETURN (assignmentExpression)? NEWLINE    # STATRETURN
+   | assignmentExpression NEWLINE?    # STATASINEPR
+   | BREAK NEWLINE    # STATBRAKE
+  // | IDENTIFIER ':' NEWLINE?    # STATIDENTIFIER
+   | NEWLINE    # STATNEWLINE
+  // | GLOBAL? INTERRUPT DECL primary WHEN expression DO assignmentExpression NEWLINE?    # STATINTERRUPT
+  // | INTERRUPT IDENTIFIER primary? NEWLINE?    # STATINTERRUPT
+   | PTP (sixRJXPoint|variableName) (FF expression)? (CON expression)? NEWLINE?    # STATPTP
+   | LIN (sixRJXPoint|variableName) (FF expression)? (CON expression)? NEWLINE?    # STATLIN
+   | CIR (sixRJXPoint|variableName) (sixRJXPoint|variableName) (expression)? (FF expression)? (CON expression)? NEWLINE?    # STATCIR
+   //| TRIGGER WHEN (IDENTIFIER) '=' expression DELAY '=' expression DO assignmentExpression (PRIO '=' expression)? NEWLINE?    # STATTRIGGER
+   ;
+
+switchBlockStatementGroups
+   : NEWLINE* (caseLabel statementList) + (defaultLabel statementList)?
+   ;
+caseLabel
+   : CASE expression (',' expression)* NEWLINE
+   ;
+defaultLabel
+   : DEFAULT NEWLINE
+   ;
+expressionList
+   : assignmentExpression (',' assignmentExpression)*
+   ;
+assignmentExpression
+   : variableName '=' expression
+   ;
+
+expression
+   : conditionalOrExpression (relationalOp conditionalOrExpression)*
+   ;
+relationalOp
+   : '=='
+   | '!='
+   | '<='
+   | '>='
+   | '<'
+   | '>'
+   ;
+conditionalOrExpression
+   : exclusiveOrExpression ((OR ) exclusiveOrExpression)*
+   ;
+exclusiveOrExpression
+   : conditionalAndExpression ((EXOR) conditionalAndExpression)*
+   ;
+conditionalAndExpression
+   : additiveExpression ((AND) additiveExpression)*
+   ;
+additiveExpression
+   : multiplicativeExpression (('+' | '-') multiplicativeExpression)*
+   ;
+multiplicativeExpression
+   : unaryNotExpression (('*' | '/') unaryNotExpression)*
+   ;
+unaryNotExpression
+   : NOT unaryNotExpression
+   | unaryPlusMinuxExpression
+   ;
+unaryPlusMinuxExpression
+   : '+' unaryPlusMinuxExpression
+   | '-' unaryPlusMinuxExpression
+   | primary
+   ;
+primary
+   : parExpression		
+   | variableName		
+   | literal			
+   ;
+parExpression
+   : '(' expression ')'
+   ;
+type
+   : primitiveType 
+   ;
+
+sixRprimitiveType
+	: POINTJ
+	| POINTX
+	;
+primitiveType
+   : BOOL
+   | CHAR
+   | INT
+   | FLOAT
+   ;
+ 
+literal
+   : numberLITERAL
+   | charLITERAL
+ //  | floatLITERAL
+   | stringLITERAL
+  // | structLiteral
+   | TRUE
+   | FALSE
+  // | enumElement
+   ;
+
+intLITERAL
+: FragINTLITERAL
+;
+
+floatLITERAL
+: FragFLOATLITERAL
+;
+
+charLITERAL
+: FragCHARLITERAL 
+;
+
+stringLITERAL
+    : FragSTRINGLITERAL
+    ;
+numberLITERAL
+	: intLITERAL
+    | floatLITERAL
+	;
+enumElement
+   : '#' IDENTIFIER
+   ;
+   
+ 
+
+/////////////////////////////////////////////////////////////
+/////     Lexer
+/////////////////////////////////////////////////////////////
+
+
+AND
+   : A N D
+   ;
+
+
+ANIN
+   : A N I N
+   ;
+
+
+ANOUT
+   : A N O U T
+   ;
+
+
+B_AND
+   : B '_' A N D
+   ;
+
+
+B_NOT
+   : B '_' N O T
+   ;
+
+
+B_OR
+   : B '_' O R
+   ;
+
+
+B_EXOR
+   : B '_' E X O R
+   ;
+
+
+BOOL
+   : B O O L
+   ;
+
+
+BREAK
+   : B R E A K
+   ;
+
+
+C_DIS
+   : C '_' D I S
+   ;
+
+
+C_ORI
+   : C '_' O R I
+   ;
+
+
+C_PTP
+   : C '_' P T P
+   ;
+
+
+C_VEL
+   : C '_' V E L
+   ;
+
+
+CASE
+   : C A S E
+   ;
+
+
+CAST_FROM
+   : C A S T '_' F R O M
+   ;
+
+
+CAST_TO
+   : C A S T '_' T O
+   ;
+
+
+CHAR
+   : C H A R
+   ;
+
+
+CIR_REL
+   : C I R '_' R E L
+   ;
+
+
+CIR
+   : C I R
+   ;
+
+
+CONST
+   : C O N S T
+   ;
+
+
+CONTINUE
+   : C O N T I N U E
+   ;
+
+
+DELAY
+   : D E L A Y
+   ;
+
+
+DECL
+   : D E C L
+   ;
+
+
+DEF
+   : D E F
+   ;
+
+
+DEFAULT
+   : D E F A U L T
+   ;
+
+
+DEFDAT
+   : D E F D A T
+   ;
+
+
+DEFFCT
+   : D E F F C T
+   ;
+
+
+DO
+   : D O
+   ;
+
+
+ELSE
+   : E L S E
+   ;
+
+
+END
+   : E N D
+   ;
+
+
+ENDDAT
+   : E N D D A T
+   ;
+
+
+ENDFCT
+   : E N D F C T
+   ;
+
+
+ENDFOR
+   : E N D F O R
+   ;
+
+
+ENDIF
+   : E N D I F
+   ;
+
+
+ENDLOOP
+   : E N D L O O P
+   ;
+
+
+ENDSWITCH
+   : E N D S W I T C H
+   ;
+
+
+ENDWHILE
+   : E N D W H I L E
+   ;
+
+
+ENUM
+   : E N U M
+   ;
+
+
+EXIT
+   : E X I T
+   ;
+
+
+EXT
+   : E X T
+   ;
+
+
+EXTFCT
+   : E X T F C T
+   ;
+
+
+FALSE
+   : F A L S E
+   ;
+
+
+FOR
+   : F O R
+   ;
+
+
+GLOBAL
+   : G L O B A L
+   ;
+
+
+GOTO
+   : G O T O
+   ;
+
+
+HALT
+   : H A L T
+   ;
+
+
+IF
+   : I F
+   ;
+
+
+IMPORT
+   : I M P O R T
+   ;
+
+
+INTERRUPT
+   : I N T E R R U P T
+   ;
+
+
+INT
+   : I N T
+   ;
+
+
+IS
+   : I S
+   ;
+
+
+LIN_REL
+   : L I N '_' R E L
+   ;
+
+
+LIN
+   : L I N
+   ;
+
+
+LOOP
+   : L O O P
+   ;
+
+
+MAXIMUM
+   : M A X I M U M
+   ;
+
+
+MINIMUM
+   : M I N I M U M
+   ;
+
+
+NOT
+   : N O T
+   ;
+
+
+OR
+   : O R
+   ;
+
+
+PRIO
+   : P R I O
+   ;
+
+
+PTP_REL
+   : P T P '_' R E L
+   ;
+
+
+PTP
+   : P T P
+   ;
+
+
+PUBLIC
+   : P U B L I C
+   ;
+
+
+FLOAT
+   : F L O A T
+   ;
+
+
+REPEAT
+   : R E P E A T
+   ;
+
+
+RETURN
+   : R E T U R N
+   ;
+
+
+SEC
+   : S E C
+   ;
+
+
+SIGNAL
+   : S I G N A L
+   ;
+
+
+STRUC
+   : S T R U C
+   ;
+
+
+SWITCH
+   : S W I T C H
+   ;
+
+
+THEN
+   : T H E N
+   ;
+
+
+TO
+   : T O
+   ;
+
+
+TRIGGER
+   : T R I G G E R
+   ;
+
+
+TRUE
+   : T R U E
+   ;
+
+
+UNTIL
+   : U N T I L
+   ;
+
+
+WAIT
+   : W A I T
+   ;
+
+
+WHEN
+   : W H E N
+   ;
+
+
+WHILE
+   : W H I L E
+   ;
+
+
+EXOR
+   : E X O R
+   ;
+
+STARTPROG
+   : S T A R T P R O G
+   ;
+
+ENDPROG
+   : E N D P R O G
+   ;
+POINTJ
+	: P O I N T J
+	;
+POINTX
+	: P O I N T X
+	;
+VECTOR
+	: V E C T O R
+	;
+CON
+	: C O N
+	;
+XX
+	: X
+	;
+YY
+	: Y
+	;
+ZZ
+	: Z
+	;
+AA
+	: A
+	;
+BB
+	: B
+	;
+CC
+	: C
+	;
+FF
+	: F
+	;
+J1
+	: J '1'
+	;
+J2
+	: J '2'
+	;
+J3
+	: J '3'
+	;
+J4
+	: J '4'
+	;
+J5
+	: J '5'
+	;
+J6
+	: J '6'
+	;
+
+fragment A
+   : ('a' | 'A')
+   ;
+
+
+fragment B
+   : ('b' | 'B')
+   ;
+
+
+fragment C
+   : ('c' | 'C')
+   ;
+
+
+fragment D
+   : ('d' | 'D')
+   ;
+
+
+fragment E
+   : ('e' | 'E')
+   ;
+
+
+fragment F
+   : ('f' | 'F')
+   ;
+
+
+fragment G
+   : ('g' | 'G')
+   ;
+
+
+fragment H
+   : ('h' | 'H')
+   ;
+
+
+fragment I
+   : ('i' | 'I')
+   ;
+
+
+fragment J
+   : ('j' | 'J')
+   ;
+
+
+fragment K
+   : ('k' | 'K')
+   ;
+
+
+fragment L
+   : ('l' | 'L')
+   ;
+
+
+fragment M
+   : ('m' | 'M')
+   ;
+
+
+fragment N
+   : ('n' | 'N')
+   ;
+
+
+fragment O
+   : ('o' | 'O')
+   ;
+
+
+fragment P
+   : ('p' | 'P')
+   ;
+
+
+fragment Q
+   : ('q' | 'Q')
+   ;
+
+
+fragment R
+   : ('r' | 'R')
+   ;
+
+
+fragment S
+   : ('s' | 'S')
+   ;
+
+
+fragment T
+   : ('t' | 'T')
+   ;
+
+
+fragment U
+   : ('u' | 'U')
+   ;
+
+
+fragment V
+   : ('v' | 'V')
+   ;
+
+
+fragment W
+   : ('w' | 'W')
+   ;
+
+
+fragment X
+   : ('x' | 'X')
+   ;
+
+
+fragment Y
+   : ('y' | 'Y')
+   ;
+
+
+fragment Z
+   : ('z' | 'Z')
+   ;
+
+
+
+fragment IdentifierStart
+   : 'a' .. 'z' | 'A' .. 'Z' | '_' | '$'
+   ;
+
+FragINTLITERAL
+: ('0' .. '9')+
+;
+
+FragFLOATLITERAL
+    : (('0' .. '9')*)('.' ('0' .. '9')+)
+    ;
+
+FragCHARLITERAL
+    : '\'' . '\'' 
+    ;
+
+FragSTRINGLITERAL
+    : '\"' .*? '\"'
+    ;
+IDENTIFIER
+   : IdentifierStart IdentifierPart*
+   ;
+fragment IdentifierPart
+   : IdentifierStart | '0' .. '9'
+;
+
+NEWLINE:
+           '\r' ? '\n' ;
+WS  :   ( ' '
+        | '\t'
+        | '\r'
+        | '\n'
+        ) ->channel(HIDDEN)
+    ;

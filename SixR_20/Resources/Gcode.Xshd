@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!-- syntaxdefinition for FumGcode 2017 by Reza Nourbakhsh -->
+
+<SyntaxDefinition name = "GCODE" extensions = ".gcode"  xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment" foreground="#57A64A" exampleText="// comment" />
+  <Color name="String" foreground="#53e69d" exampleText="string text = &quot;Hello, World!&quot;"/>
+  <Color name="Preprocessor" foreground="#53e69d" exampleText="#region Title" />
+  <Color name="Keywords" fontWeight="bold" foreground="#2cabe3" exampleText="if (a) {} else {}"/>
+  <Color name="SixR" fontWeight="bold" foreground="#707cd2" exampleText="if (a) {} else {}"/>
+
+  <RuleSet  ignoreCase="true">
+    <Span color="Comment" begin="//" />
+    <Span color="Comment" multiline="true"
+
+       begin="/\*" end="\*/" />
+
+    <Span color="String">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <!-- nested span for escape sequences -->
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+
+    <Keywords fontWeight="bold" color="Keywords" >
+      <Word>int</Word> 
+      <Word>float</Word>
+      <Word>bool</Word>
+      <Word>string</Word>
+      <Word>char</Word>
+      <Word>if</Word>
+      <Word>then</Word>
+      <Word>else</Word>
+      <Word>endif</Word>
+      <Word>while</Word>
+      <Word>endwhile</Word>
+      <Word>for</Word>
+      <Word>to</Word>
+      <Word>endfor</Word>
+      <Word>break</Word>
+      <Word>continue</Word>
+    <Word>return</Word>
+    <Word>end</Word>
+    </Keywords>
+    <Keywords fontWeight="bold" color="SixR" >
+      <Word>PTP</Word>
+      <Word>LIN</Word>
+      <Word>CIR</Word>
+      <Word>WAIT</Word>
+      <Word>SEC</Word>
+      <Word>POINTp</Word>
+      <Word>POINTj</Word>
+    </Keywords>
+    <Keywords fontWeight="bold" color="String">
+      <Word>J1</Word>
+      <Word>J2</Word>
+      <Word>J3</Word>
+      <Word>J4</Word>
+      <Word>J5</Word>
+      <Word>J6</Word>
+      <Word>F</Word>
+      <Word>CON</Word>
+      <Word>X</Word>
+      <Word>Y</Word>
+      <Word>Z</Word>
+      <Word>A</Word>
+      <Word>B</Word>
+      <Word>C</Word>
+    </Keywords>
+
+    <!-- Digits -->
+    <Rule foreground="#53e69d">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |    \b
+      (    \d+(\.[0-9]+)?   #number with optional floating point
+      |    \.[0-9]+         #or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)? # optional exponent
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>
